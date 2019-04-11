@@ -64,7 +64,7 @@ bookmarksRouter
   .route('/bookmarks/:bookmark_id')
   .all((req, res, next) => {
     const { bookmark_id } = req.params
-    BookarksService.getById(req.app.get('db'), bookmark_id)
+    BookmarksService.getById(req.app.get('db'), bookmark_id)
       .then(bookmark => {
         if (!bookmark) {
           logger.error(`Bookmark with id ${bookmark_id} not found.`)
@@ -84,7 +84,7 @@ bookmarksRouter
   .delete((req, res, next) => {
     // TODO: update to use db
     const { bookmark_id } = req.params
-    BookarksService.deleteBookmark(
+    BookmarksService.deleteBookmark(
       req.app.get('db'),
       bookmark_id
     )
@@ -94,5 +94,14 @@ bookmarksRouter
       })
       .catch(next)
   })
+  .patch((req, res, next) => {
+    const { id } = req.params
+    BookmarksService.updateBookmark(knex, id, newBookmarkFields)
+    .then(bm => {
+      bm
+      ? res.json(bm) : res.json(404)
+    })
+    
+  });
 
 module.exports = bookmarksRouter
