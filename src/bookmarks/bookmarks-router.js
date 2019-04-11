@@ -2,7 +2,7 @@ const express = require('express')
 const { isWebUri } = require('valid-url')
 const xss = require('xss')
 const logger = require('../logger')
-const BookarksService = require('./bookmarks-service')
+const BookmarksService = require('./bookmarks-service')
 
 const bookmarksRouter = express.Router()
 const bodyParser = express.json()
@@ -18,7 +18,7 @@ const serializeBookmark = bookmark => ({
 bookmarksRouter
   .route('/bookmarks')
   .get((req, res, next) => {
-    BookarksService.getAllBookmarks(req.app.get('db'))
+    BookMarksService.getAllBookmarks(req.app.get('db'))
       .then(bookmarks => {
         res.json(bookmarks.map(serializeBookmark))
       })
@@ -64,12 +64,14 @@ bookmarksRouter
   .route('/bookmarks/:bookmark_id')
   .all((req, res, next) => {
     const { bookmark_id } = req.params
+     const knex = req.app.get('db');
+     
     BookmarksService.getById(req.app.get('db'), bookmark_id)
       .then(bookmark => {
         if (!bookmark) {
           logger.error(`Bookmark with id ${bookmark_id} not found.`)
           return res.status(404).json({
-            error: { message: `Bookmark Not Found` }
+            error: { message: `Bookmark doesn\'t exist` }
           })
         }
         res.bookmark = bookmark
@@ -94,14 +96,29 @@ bookmarksRouter
       })
       .catch(next)
   })
-  .patch((req, res, next) => {
-    const { id } = req.params
-    BookmarksService.updateBookmark(knex, id, newBookmarkFields)
-    .then(bm => {
-      bm
-      ? res.json(bm) : res.json(404)
-    })
-    
-  });
+  .patch(bodyParser, (req, res, next) => {
+     const { title, content, style } = req.body
+    const bookmarkToUpdate = { title, content, style }
+    const numberOfValues = Object.values(bookmarkToUpdate).filter(Boolean).length
+       if (numberOfValues === 0) {
+         return res.status(400).json({
+           error: {
+             message: `Request body must content either 'title', 'style' or 'content'`
+           }
+         })
+       }
+    BookmarksService.updateBookmark(
+      req.app.get('db'),
+      req.params.bookmark_id,
+      bookmarkToUpdate
+    )
+      .then(numRowsAffected => {
+        res.status(204).end()
+      })
+      .catch(next)
+   })
+     
+      
+
 
 module.exports = bookmarksRouter
